@@ -1,98 +1,81 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import React, { useState } from 'react';
+import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [food, setFood] = useState('');
+  const [calories, setCalories] = useState('');
+  const [meals, setMeals] = useState<{id: string, food: string, calories: string}[]>([]);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const addMeal = () => {
+    if (food && calories) {
+      setMeals([{ id: Date.now().toString(), food, calories }, ...meals]);
+      setFood('');
+      setCalories('');
+    }
+  };
+
+  const totalCalories = meals.reduce((sum, item) => sum + parseInt(item.calories || '0'), 0);
+
+  return (
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      style={styles.container}
+    >
+      <View style={styles.header}>
+        <Text style={styles.title}>Мои Калории</Text>
+        <View style={styles.circle}>
+          <Text style={styles.totalText}>{totalCalories}</Text>
+          <Text style={styles.unitText}>ккал</Text>
+        </View>
+      </View>
+
+      <View style={styles.inputSection}>
+        <TextInput 
+          style={styles.input} 
+          placeholder="Что съели?" 
+          value={food}
+          onChangeText={setFood}
+        />
+        <TextInput 
+          style={styles.input} 
+          placeholder="Калории" 
+          keyboardType="numeric"
+          value={calories}
+          onChangeText={setCalories}
+        />
+        <TouchableOpacity style={styles.button} onPress={addMeal}>
+          <Text style={styles.buttonText}>Добавить запись</Text>
+        </TouchableOpacity>
+      </View>
+
+      <FlatList
+        data={meals}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.cardFood}>{item.food}</Text>
+            <Text style={styles.cardCalories}>{item.calories} ккал</Text>
+          </View>
+        )}
+        style={styles.list}
+      />
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5', paddingHorizontal: 20, paddingTop: 60 },
+  header: { alignItems: 'center', marginBottom: 30 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#333', marginBottom: 15 },
+  circle: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#4ecca3', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
+  totalText: { fontSize: 32, fontWeight: 'bold', color: 'white' },
+  unitText: { color: 'white', fontSize: 14 },
+  inputSection: { backgroundColor: 'white', padding: 20, borderRadius: 15, marginBottom: 20, elevation: 3 },
+  input: { borderBottomWidth: 1, borderBottomColor: '#ddd', marginBottom: 15, padding: 10, fontSize: 16 },
+  button: { backgroundColor: '#4ecca3', padding: 15, borderRadius: 10, alignItems: 'center' },
+  buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+  list: { flex: 1 },
+  card: { backgroundColor: 'white', padding: 15, borderRadius: 10, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' },
+  cardFood: { fontSize: 16, fontWeight: '500' },
+  cardCalories: { color: '#666', fontWeight: 'bold' }
 });
