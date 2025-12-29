@@ -7,7 +7,6 @@ export default function HomeScreen() {
   const [calories, setCalories] = useState('');
   const [meals, setMeals] = useState<{id: string, food: string, calories: string}[]>([]);
 
-  // 1. Загрузка при старте
   useEffect(() => {
     const loadData = async () => {
       const saved = await AsyncStorage.getItem('meals_data');
@@ -16,7 +15,6 @@ export default function HomeScreen() {
     loadData();
   }, []);
 
-  // 2. Сохранение при изменении списка
   const saveMeals = async (newMeals: any) => {
     await AsyncStorage.setItem('meals_data', JSON.stringify(newMeals));
   };
@@ -25,10 +23,17 @@ export default function HomeScreen() {
     if (food && calories) {
       const newMeals = [{ id: Date.now().toString(), food, calories }, ...meals];
       setMeals(newMeals);
-      saveMeals(newMeals); // Сохраняем в память телефона
+      saveMeals(newMeals);
       setFood('');
       setCalories('');
     }
+  };
+
+  // Функция удаления
+  const deleteMeal = (id: string) => {
+    const filteredMeals = meals.filter(meal => meal.id !== id);
+    setMeals(filteredMeals);
+    saveMeals(filteredMeals);
   };
 
   const totalCalories = meals.reduce((sum, item) => sum + parseInt(item.calories || '0'), 0);
@@ -56,8 +61,13 @@ export default function HomeScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.cardFood}>{item.food}</Text>
-            <Text style={styles.cardCalories}>{item.calories} ккал</Text>
+            <View>
+              <Text style={styles.cardFood}>{item.food}</Text>
+              <Text style={styles.cardCalories}>{item.calories} ккал</Text>
+            </View>
+            <TouchableOpacity onPress={() => deleteMeal(item.id)}>
+              <Text style={styles.deleteBtn}>🗑️</Text>
+            </TouchableOpacity>
           </View>
         )}
       />
@@ -69,14 +79,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f9fa', paddingHorizontal: 20, paddingTop: 60 },
   header: { alignItems: 'center', marginBottom: 25 },
   title: { fontSize: 26, fontWeight: 'bold', color: '#2d3436' },
-  circle: { width: 130, height: 130, borderRadius: 65, backgroundColor: '#00b894', justifyContent: 'center', alignItems: 'center', marginTop: 10 },
+  circle: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#00b894', justifyContent: 'center', alignItems: 'center', marginTop: 10 },
   totalText: { fontSize: 32, fontWeight: 'bold', color: 'white' },
   unitText: { color: 'white', fontSize: 12 },
   inputSection: { backgroundColor: 'white', padding: 20, borderRadius: 15, marginBottom: 20 },
   input: { borderBottomWidth: 1, borderBottomColor: '#dfe6e9', marginBottom: 15, padding: 8 },
   button: { backgroundColor: '#00b894', padding: 15, borderRadius: 10, alignItems: 'center' },
   buttonText: { color: 'white', fontWeight: 'bold' },
-  card: { backgroundColor: 'white', padding: 15, borderRadius: 10, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, borderLeftWidth: 4, borderLeftColor: '#00b894' },
-  cardFood: { fontSize: 16 },
-  cardCalories: { fontWeight: 'bold', color: '#636e72' }
+  card: { backgroundColor: 'white', padding: 15, borderRadius: 10, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' },
+  cardFood: { fontSize: 16, fontWeight: '500' },
+  cardCalories: { color: '#636e72' },
+  deleteBtn: { fontSize: 20 }
 });

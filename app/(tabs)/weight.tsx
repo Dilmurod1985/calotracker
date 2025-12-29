@@ -6,40 +6,32 @@ export default function WeightScreen() {
   const [weight, setWeight] = useState('');
   const [history, setHistory] = useState<{id: string, value: string, date: string}[]>([]);
 
-  // 1. Загрузка данных при открытии экрана
   useEffect(() => {
     const loadWeightData = async () => {
-      try {
-        const savedWeight = await AsyncStorage.getItem('weight_history');
-        if (savedWeight) setHistory(JSON.parse(savedWeight));
-      } catch (e) {
-        console.error("Ошибка загрузки веса", e);
-      }
+      const savedWeight = await AsyncStorage.getItem('weight_history');
+      if (savedWeight) setHistory(JSON.parse(savedWeight));
     };
     loadWeightData();
   }, []);
 
-  // 2. Функция для сохранения данных в память
   const saveWeightData = async (newHistory: any) => {
-    try {
-      await AsyncStorage.setItem('weight_history', JSON.stringify(newHistory));
-    } catch (e) {
-      console.error("Ошибка сохранения веса", e);
-    }
+    await AsyncStorage.setItem('weight_history', JSON.stringify(newHistory));
   };
 
   const addWeight = () => {
     if (weight) {
-      const newEntry = {
-        id: Date.now().toString(),
-        value: weight,
-        date: new Date().toLocaleDateString()
-      };
+      const newEntry = { id: Date.now().toString(), value: weight, date: new Date().toLocaleDateString() };
       const newHistory = [newEntry, ...history];
       setHistory(newHistory);
-      saveWeightData(newHistory); // Сохраняем обновленный список
+      saveWeightData(newHistory);
       setWeight('');
     }
+  };
+
+  const deleteWeight = (id: string) => {
+    const filteredHistory = history.filter(item => item.id !== id);
+    setHistory(filteredHistory);
+    saveWeightData(filteredHistory);
   };
 
   const getProgress = () => {
@@ -54,21 +46,15 @@ export default function WeightScreen() {
         <Text style={styles.title}>Контроль Веса</Text>
         <View style={styles.weightCircle}>
           <Text style={styles.currentWeight}>{history[0]?.value || '--'}</Text>
-          <Text style={styles.unit}>текущий вес (кг)</Text>
+          <Text style={styles.unit}>кг</Text>
         </View>
         <Text style={styles.progressText}>Прогресс: {getProgress()}</Text>
       </View>
 
       <View style={styles.inputCard}>
-        <TextInput 
-          style={styles.input} 
-          placeholder="Введите ваш вес (кг)" 
-          keyboardType="numeric"
-          value={weight}
-          onChangeText={setWeight}
-        />
+        <TextInput style={styles.input} placeholder="Ваш вес" keyboardType="numeric" value={weight} onChangeText={setWeight} />
         <TouchableOpacity style={styles.button} onPress={addWeight}>
-          <Text style={styles.buttonText}>Зафиксировать вес</Text>
+          <Text style={styles.buttonText}>Зафиксировать</Text>
         </TouchableOpacity>
       </View>
 
@@ -77,11 +63,15 @@ export default function WeightScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.historyItem}>
-            <Text style={styles.historyDate}>{item.date}</Text>
-            <Text style={styles.historyValue}>{item.value} кг</Text>
+            <View>
+              <Text style={styles.historyDate}>{item.date}</Text>
+              <Text style={styles.historyValue}>{item.value} кг</Text>
+            </View>
+            <TouchableOpacity onPress={() => deleteWeight(item.id)}>
+              <Text style={styles.deleteBtn}>🗑️</Text>
+            </TouchableOpacity>
           </View>
         )}
-        style={styles.list}
       />
     </KeyboardAvoidingView>
   );
@@ -90,17 +80,17 @@ export default function WeightScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f2f5', paddingHorizontal: 20, paddingTop: 60 },
   header: { alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 26, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 20 },
-  weightCircle: { width: 140, height: 140, borderRadius: 70, backgroundColor: '#4a90e2', justifyContent: 'center', alignItems: 'center', elevation: 8 },
-  currentWeight: { fontSize: 36, fontWeight: 'bold', color: 'white' },
-  unit: { color: 'white', fontSize: 12, opacity: 0.8 },
-  progressText: { marginTop: 15, fontSize: 16, color: '#4a90e2', fontWeight: '600' },
-  inputCard: { backgroundColor: 'white', padding: 20, borderRadius: 20, marginBottom: 20 },
-  input: { borderBottomWidth: 1, borderBottomColor: '#ddd', marginBottom: 20, padding: 10, fontSize: 18, textAlign: 'center' },
-  button: { backgroundColor: '#4a90e2', padding: 15, borderRadius: 12, alignItems: 'center' },
+  title: { fontSize: 26, fontWeight: 'bold' },
+  weightCircle: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#4a90e2', justifyContent: 'center', alignItems: 'center' },
+  currentWeight: { fontSize: 32, fontWeight: 'bold', color: 'white' },
+  unit: { color: 'white' },
+  progressText: { marginTop: 10, fontWeight: '600', color: '#4a90e2' },
+  inputCard: { backgroundColor: 'white', padding: 20, borderRadius: 15, marginBottom: 20 },
+  input: { borderBottomWidth: 1, borderBottomColor: '#ddd', marginBottom: 15, textAlign: 'center', fontSize: 18 },
+  button: { backgroundColor: '#4a90e2', padding: 15, borderRadius: 10, alignItems: 'center' },
   buttonText: { color: 'white', fontWeight: 'bold' },
-  list: { flex: 1 },
-  historyItem: { backgroundColor: 'white', padding: 15, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  historyDate: { color: '#666' },
-  historyValue: { fontWeight: 'bold' }
+  historyItem: { backgroundColor: 'white', padding: 15, borderRadius: 10, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' },
+  historyDate: { color: '#666', fontSize: 12 },
+  historyValue: { fontWeight: 'bold', fontSize: 16 },
+  deleteBtn: { fontSize: 20 }
 });
