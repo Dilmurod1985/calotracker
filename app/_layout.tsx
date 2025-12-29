@@ -1,35 +1,24 @@
-import { Ionicons } from '@expo/vector-icons'; // Библиотека иконок
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 
 export default function TabLayout() {
   return (
-    <Tabs screenOptions={{ 
-      tabBarActiveTintColor: '#00b894',
-      headerShown: false, 
-    }}>
+    <Tabs screenOptions={{ tabBarActiveTintColor: '#4834d4', headerShown: false }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Калории',
-          tabBarIcon: ({ color }) => <Ionicons name="nutrition" size={24} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="nutrition" size={28} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="weight"
+        name="profile"
         options={{
-          title: 'Вес',
-          tabBarIcon: ({ color }) => <Ionicons name="bar-chart" size={24} color={color} />,
+          title: 'Советы',
+          tabBarIcon: ({ color }) => <Ionicons name="analytics" size={28} color={color} />,
         }}
       />
     </Tabs>
   );
 }
-
-<Tabs.Screen
-  name="profile"
-  options={{
-    title: 'Профиль',
-    tabBarIcon: ({ color }) => <Ionicons name="person" size={24} color={color} />,
-  }}
-/>
