@@ -1,8 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-// Твои ключи из Dashboard
 const API_ID = 'fc072be0'; 
 const API_KEY = 'c855f04ec9cde54b27813d3df14ea2c8';
 
@@ -21,36 +20,54 @@ export default function HomeScreen() {
   const searchAndAddMeal = async () => {
     if (!query) return;
     setLoading(true);
+    
     try {
-      // 1. Перевод на английский (Edamam лучше понимает English)
-      const transRes = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(query)}&langpair=ru|en`);
-      const transData = await transRes.json();
-      const englishQuery = transData.responseData.translatedText;
+      // Шаг 1: Пробуем перевести
+      let englishQuery = query;
+      try {
+        const transRes = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(query)}&langpair=ru|en`, { method: 'GET' });
+        const transData = await transRes.json();
+        if (transData.responseData) {
+            englishQuery = transData.responseData.translatedText;
+        }
+      } catch (e) {
+        console.log("Ошибка переводчика, пробуем прямой запрос");
+      }
 
-      // 2. Запрос к Edamam
-      const response = await fetch(
-        `https://api.edamam.com/api/nutrition-data?app_id=${API_ID}&app_key=${API_KEY}&ingr=${encodeURIComponent(englishQuery)}`
-      );
+      // Шаг 2: Запрос к Edamam
+      const url = `https://api.edamam.com/api/nutrition-data?app_id=${API_ID}&app_key=${API_KEY}&ingr=${encodeURIComponent(englishQuery)}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Ошибка сервера Edamam: ${response.status}`);
+      }
+
       const data = await response.json();
 
-      if (data.calories === 0) {
-        alert("Продукт не найден. Уточните, например: 'Плов 200г'");
+      if (!data.calories || data.calories === 0) {
+        Alert.alert("Ничего не найдено", "Попробуйте уточнить запрос (например: '100g rice' или 'Плов 200г')");
       } else {
         const newMeal = {
           id: Date.now().toString(),
           name: query,
           kcal: Math.round(data.calories),
-          protein: Math.round(data.totalNutrients.PROCNT?.quantity || 0),
-          fat: Math.round(data.totalNutrients.FAT?.quantity || 0),
+          protein: Math.round(data.totalNutrients?.PROCNT?.quantity || 0),
+          fat: Math.round(data.totalNutrients?.FAT?.quantity || 0),
           date: new Date().toLocaleDateString()
         };
         const updated = [newMeal, ...meals];
         setMeals(updated);
         await AsyncStorage.setItem('meals_history', JSON.stringify(updated));
         setQuery('');
+        Alert.alert("Успешно!", `Добавлено: ${newMeal.kcal} ккал`);
       }
-    } catch (e) { alert("Ошибка сети"); }
-    finally { setLoading(false); Keyboard.dismiss(); }
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert("Ошибка соединения", "Проверьте интернет на iPhone и убедитесь, что Tunnel активен.");
+    } finally {
+      setLoading(false);
+      Keyboard.dismiss();
+    }
   };
 
   const todayKcal = meals
@@ -63,9 +80,16 @@ export default function HomeScreen() {
       <Text style={styles.subHeader}>Всего за сегодня</Text>
 
       <View style={styles.inputBox}>
-        <TextInput style={styles.input} placeholder="Что съели? (например: Плов 300г)" value={query} onChangeText={setQuery} />
+        <TextInput 
+          style={styles.input} 
+          placeholder="Например: Плов 300г" 
+          value={query} 
+          onChangeText={setQuery}
+          returnKeyType="search"
+          onSubmitEditing={searchAndAddMeal}
+        />
         <TouchableOpacity style={styles.addBtn} onPress={searchAndAddMeal} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.addBtnText}>РАССЧИТАТЬ И ДОБАВИТЬ</Text>}
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.addBtnText}>РАССЧИТАТЬ</Text>}
         </TouchableOpacity>
       </View>
 
@@ -74,7 +98,10 @@ export default function HomeScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({item}) => (
           <View style={styles.mealItem}>
-            <View><Text style={styles.mealName}>{item.name}</Text><Text style={styles.nutrients}>Б: {item.protein}г | Ж: {item.fat}г</Text></View>
+            <View>
+              <Text style={styles.mealName}>{item.name}</Text>
+              <Text style={styles.nutrients}>Б: {item.protein}г | Ж: {item.fat}г</Text>
+            </View>
             <Text style={styles.mealKcal}>{item.kcal} ккал</Text>
           </View>
         )}
@@ -88,7 +115,7 @@ const styles = StyleSheet.create({
   headerKcal: { fontSize: 48, fontWeight: 'bold', color: '#4834d4', textAlign: 'center' },
   subHeader: { fontSize: 16, color: '#636e72', textAlign: 'center', marginBottom: 30 },
   inputBox: { backgroundColor: '#fff', padding: 15, borderRadius: 20, elevation: 5, marginBottom: 20 },
-  input: { borderBottomWidth: 1, borderColor: '#eee', paddingVertical: 10, fontSize: 16, marginBottom: 15 },
+  input: { borderBottomWidth: 1, borderColor: '#eee', paddingVertical: 10, fontSize: 16, marginBottom: 15, color: '#000' },
   addBtn: { backgroundColor: '#4834d4', padding: 15, borderRadius: 12, alignItems: 'center' },
   addBtnText: { color: '#fff', fontWeight: 'bold' },
   mealItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, backgroundColor: '#fff', borderRadius: 15, marginBottom: 10 },
