@@ -1,9 +1,32 @@
-import React, { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function WeightScreen() {
   const [weight, setWeight] = useState('');
   const [history, setHistory] = useState<{id: string, value: string, date: string}[]>([]);
+
+  // 1. Загрузка данных при открытии экрана
+  useEffect(() => {
+    const loadWeightData = async () => {
+      try {
+        const savedWeight = await AsyncStorage.getItem('weight_history');
+        if (savedWeight) setHistory(JSON.parse(savedWeight));
+      } catch (e) {
+        console.error("Ошибка загрузки веса", e);
+      }
+    };
+    loadWeightData();
+  }, []);
+
+  // 2. Функция для сохранения данных в память
+  const saveWeightData = async (newHistory: any) => {
+    try {
+      await AsyncStorage.setItem('weight_history', JSON.stringify(newHistory));
+    } catch (e) {
+      console.error("Ошибка сохранения веса", e);
+    }
+  };
 
   const addWeight = () => {
     if (weight) {
@@ -12,12 +35,13 @@ export default function WeightScreen() {
         value: weight,
         date: new Date().toLocaleDateString()
       };
-      setHistory([newEntry, ...history]);
+      const newHistory = [newEntry, ...history];
+      setHistory(newHistory);
+      saveWeightData(newHistory); // Сохраняем обновленный список
       setWeight('');
     }
   };
 
-  // Расчет прогресса (сравнение последней записи с предыдущей)
   const getProgress = () => {
     if (history.length < 2) return "Начните вводить вес";
     const diff = parseFloat(history[0].value) - parseFloat(history[1].value);
@@ -67,16 +91,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f2f5', paddingHorizontal: 20, paddingTop: 60 },
   header: { alignItems: 'center', marginBottom: 20 },
   title: { fontSize: 26, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 20 },
-  weightCircle: { width: 150, height: 150, borderRadius: 75, backgroundColor: '#4a90e2', justifyContent: 'center', alignItems: 'center', shadowOpacity: 0.3, shadowRadius: 10, elevation: 8 },
-  currentWeight: { fontSize: 40, fontWeight: 'bold', color: 'white' },
+  weightCircle: { width: 140, height: 140, borderRadius: 70, backgroundColor: '#4a90e2', justifyContent: 'center', alignItems: 'center', elevation: 8 },
+  currentWeight: { fontSize: 36, fontWeight: 'bold', color: 'white' },
   unit: { color: 'white', fontSize: 12, opacity: 0.8 },
   progressText: { marginTop: 15, fontSize: 16, color: '#4a90e2', fontWeight: '600' },
-  inputCard: { backgroundColor: 'white', padding: 20, borderRadius: 20, marginBottom: 20, elevation: 4 },
+  inputCard: { backgroundColor: 'white', padding: 20, borderRadius: 20, marginBottom: 20 },
   input: { borderBottomWidth: 1, borderBottomColor: '#ddd', marginBottom: 20, padding: 10, fontSize: 18, textAlign: 'center' },
   button: { backgroundColor: '#4a90e2', padding: 15, borderRadius: 12, alignItems: 'center' },
-  buttonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+  buttonText: { color: 'white', fontWeight: 'bold' },
   list: { flex: 1 },
   historyItem: { backgroundColor: 'white', padding: 15, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   historyDate: { color: '#666' },
-  historyValue: { fontWeight: 'bold', color: '#333' }
+  historyValue: { fontWeight: 'bold' }
 });
