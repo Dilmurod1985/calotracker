@@ -1,93 +1,63 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function HomeScreen() {
   const [food, setFood] = useState('');
   const [calories, setCalories] = useState('');
-  const [meals, setMeals] = useState<{id: string, food: string, calories: string}[]>([]);
+  const [meals, setMeals] = useState<any[]>([]);
 
   useEffect(() => {
-    const loadData = async () => {
-      const saved = await AsyncStorage.getItem('meals_data');
-      if (saved) setMeals(JSON.parse(saved));
-    };
-    loadData();
+    loadMeals();
   }, []);
 
-  const saveMeals = async (newMeals: any) => {
-    await AsyncStorage.setItem('meals_data', JSON.stringify(newMeals));
+  const loadMeals = async () => {
+    const saved = await AsyncStorage.getItem('meals_history');
+    if (saved) setMeals(JSON.parse(saved));
   };
 
-  const addMeal = () => {
-    if (food && calories) {
-      const newMeals = [{ id: Date.now().toString(), food, calories }, ...meals];
-      setMeals(newMeals);
-      saveMeals(newMeals);
-      setFood('');
-      setCalories('');
-    }
+  const addMeal = async () => {
+    if (!food || !calories) return;
+    const newMeal = { 
+      id: Date.now().toString(), 
+      name: food, 
+      kcal: parseInt(calories),
+      date: new Date().toLocaleDateString() // Сохраняем дату
+    };
+    const updated = [newMeal, ...meals];
+    setMeals(updated);
+    await AsyncStorage.setItem('meals_history', JSON.stringify(updated));
+    setFood(''); setCalories('');
   };
 
-  // Функция удаления
-  const deleteMeal = (id: string) => {
-    const filteredMeals = meals.filter(meal => meal.id !== id);
-    setMeals(filteredMeals);
-    saveMeals(filteredMeals);
-  };
-
-  const totalCalories = meals.reduce((sum, item) => sum + parseInt(item.calories || '0'), 0);
+  const todayKcal = meals
+    .filter(m => m.date === new Date().toLocaleDateString())
+    .reduce((sum, m) => sum + m.kcal, 0);
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Мои Калории</Text>
-        <View style={styles.circle}>
-          <Text style={styles.totalText}>{totalCalories}</Text>
-          <Text style={styles.unitText}>ккал сегодня</Text>
-        </View>
-      </View>
-
-      <View style={styles.inputSection}>
+    <View style={styles.container}>
+      <Text style={styles.title}>Сегодня: {todayKcal} ккал</Text>
+      <View style={styles.inputRow}>
         <TextInput style={styles.input} placeholder="Что съели?" value={food} onChangeText={setFood} />
-        <TextInput style={styles.input} placeholder="Калории" keyboardType="numeric" value={calories} onChangeText={setCalories} />
-        <TouchableOpacity style={styles.button} onPress={addMeal}>
-          <Text style={styles.buttonText}>➕ Добавить запись</Text>
-        </TouchableOpacity>
+        <TextInput style={[styles.input, {width: 80}]} placeholder="Ккал" keyboardType="numeric" value={calories} onChangeText={setCalories} />
+        <TouchableOpacity style={styles.addBtn} onPress={addMeal}><Text style={{color:'#fff'}}>+</Text></TouchableOpacity>
       </View>
-
-      <FlatList
-        data={meals}
+      <FlatList 
+        data={meals.filter(m => m.date === new Date().toLocaleDateString())}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View>
-              <Text style={styles.cardFood}>{item.food}</Text>
-              <Text style={styles.cardCalories}>{item.calories} ккал</Text>
-            </View>
-            <TouchableOpacity onPress={() => deleteMeal(item.id)}>
-              <Text style={styles.deleteBtn}>🗑️</Text>
-            </TouchableOpacity>
-          </View>
+        renderItem={({item}) => (
+          <View style={styles.mealItem}><Text>{item.name}</Text><Text style={{fontWeight:'bold'}}>{item.kcal} ккал</Text></View>
         )}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa', paddingHorizontal: 20, paddingTop: 60 },
-  header: { alignItems: 'center', marginBottom: 25 },
-  title: { fontSize: 26, fontWeight: 'bold', color: '#2d3436' },
-  circle: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#00b894', justifyContent: 'center', alignItems: 'center', marginTop: 10 },
-  totalText: { fontSize: 32, fontWeight: 'bold', color: 'white' },
-  unitText: { color: 'white', fontSize: 12 },
-  inputSection: { backgroundColor: 'white', padding: 20, borderRadius: 15, marginBottom: 20 },
-  input: { borderBottomWidth: 1, borderBottomColor: '#dfe6e9', marginBottom: 15, padding: 8 },
-  button: { backgroundColor: '#00b894', padding: 15, borderRadius: 10, alignItems: 'center' },
-  buttonText: { color: 'white', fontWeight: 'bold' },
-  card: { backgroundColor: 'white', padding: 15, borderRadius: 10, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' },
-  cardFood: { fontSize: 16, fontWeight: '500' },
-  cardCalories: { color: '#636e72' },
-  deleteBtn: { fontSize: 20 }
+  container: { flex: 1, padding: 20, paddingTop: 60, backgroundColor: '#fff' },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
+  inputRow: { flexDirection: 'row', marginBottom: 20 },
+  input: { borderBottomWidth: 1, borderColor: '#ccc', marginRight: 10, flex: 1, padding: 5 },
+  addBtn: { backgroundColor: '#4834d4', padding: 15, borderRadius: 10 },
+  mealItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, borderBottomWidth: 1, borderBottomColor: '#eee' }
 });
