@@ -1,27 +1,61 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 export default function ProfileScreen() {
-  const weight = 84;
-  const height = 170;
+  const [height, setHeight] = useState('170');
+  const [currentWeight, setCurrentWeight] = useState(84);
 
-  // Расчет ИМТ (Вес / Рост в метрах в квадрате)
-  const bmi = (weight / ((height / 100) ** 2)).toFixed(1);
+  useEffect(() => {
+    const loadData = async () => {
+      // Загружаем сохраненный рост
+      const savedHeight = await AsyncStorage.getItem('user_height');
+      if (savedHeight) setHeight(savedHeight);
+
+      // Загружаем историю веса и берем самое последнее значение
+      const weightHistory = await AsyncStorage.getItem('weight_history');
+      if (weightHistory) {
+        const history = JSON.parse(weightHistory);
+        if (history.length > 0) {
+          setCurrentWeight(parseFloat(history[0].value));
+        }
+      }
+    };
+    loadData();
+  }, []);
+
+  const saveHeight = async (val: string) => {
+    setHeight(val);
+    await AsyncStorage.setItem('user_height', val);
+  };
+
+  const bmi = (currentWeight / ((parseFloat(height) / 100) ** 2)).toFixed(1);
 
   const getStatus = () => {
     const val = parseFloat(bmi);
-    if (val < 18.5) return { text: "Дефицит веса", color: "#fab1a0", advice: "Вам нужно увеличить калорийность рациона и добавить белок." };
-    if (val < 25) return { text: "Норма", color: "#00b894", advice: "Отличный результат! Поддерживайте текущий режим питания." };
-    if (val < 30) return { text: "Избыточный вес", color: "#fdcb6e", advice: "Рекомендуется снизить потребление быстрых углеводов и сахара." };
-    return { text: "Ожирение", color: "#e17055", advice: "Необходим дефицит калорий и регулярные прогулки по 30-40 минут." };
+    if (val < 18.5) return { text: "Дефицит", color: "#fab1a0", advice: "Нужен профицит калорий." };
+    if (val < 25) return { text: "Норма", color: "#00b894", advice: "Так держать!" };
+    if (val < 30) return { text: "Избыток", color: "#fdcb6e", advice: "Нужен небольшой дефицит калорий." };
+    return { text: "Ожирение", color: "#e17055", advice: "Рекомендуется консультация и диета." };
   };
 
   const status = getStatus();
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Мой Профиль</Text>
+      <Text style={styles.title}>Настройки и ИМТ</Text>
       
+      <View style={styles.inputCard}>
+        <Text style={styles.label}>Ваш рост (см):</Text>
+        <TextInput 
+          style={styles.input}
+          keyboardType="numeric"
+          value={height}
+          onChangeText={saveHeight}
+        />
+        <Text style={styles.weightNote}>Актуальный вес: {currentWeight} кг (из истории)</Text>
+      </View>
+
       <View style={[styles.card, { borderLeftColor: status.color }]}>
         <Text style={styles.label}>Ваш ИМТ:</Text>
         <Text style={[styles.bmiValue, { color: status.color }]}>{bmi}</Text>
@@ -29,13 +63,8 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.adviceCard}>
-        <Text style={styles.adviceTitle}>💡 Совет дня:</Text>
+        <Text style={styles.adviceTitle}>💡 Рекомендация:</Text>
         <Text style={styles.adviceText}>{status.advice}</Text>
-        <Text style={styles.dietTip}>
-          • Пейте не менее 2л воды в день.{"\n"}
-          • Старайтесь ужинать за 3 часа до сна.{"\n"}
-          • Замените жареное на запеченное или вареное.
-        </Text>
       </View>
     </ScrollView>
   );
@@ -43,13 +72,15 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f9fa', padding: 20, paddingTop: 60 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#2d3436', marginBottom: 20 },
-  card: { backgroundColor: 'white', padding: 25, borderRadius: 20, alignItems: 'center', borderLeftWidth: 8, elevation: 4 },
-  label: { fontSize: 16, color: '#636e72' },
-  bmiValue: { fontSize: 48, fontWeight: 'bold', marginVertical: 10 },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
+  inputCard: { backgroundColor: 'white', padding: 20, borderRadius: 15, marginBottom: 20 },
+  label: { fontSize: 14, color: '#636e72', marginBottom: 5 },
+  input: { fontSize: 22, fontWeight: 'bold', borderBottomWidth: 1, borderBottomColor: '#eee', paddingVertical: 5 },
+  weightNote: { fontSize: 12, color: '#b2bec3', marginTop: 10 },
+  card: { backgroundColor: 'white', padding: 20, borderRadius: 15, alignItems: 'center', borderLeftWidth: 8 },
+  bmiValue: { fontSize: 40, fontWeight: 'bold' },
   statusText: { fontSize: 18, fontWeight: '600' },
-  adviceCard: { backgroundColor: 'white', padding: 20, borderRadius: 20, marginTop: 20, elevation: 3 },
-  adviceTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
-  adviceText: { fontSize: 16, color: '#2d3436', lineHeight: 22 },
-  dietTip: { marginTop: 15, fontSize: 15, color: '#636e72', lineHeight: 24 }
+  adviceCard: { backgroundColor: 'white', padding: 20, borderRadius: 15, marginTop: 20 },
+  adviceTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  adviceText: { fontSize: 16 }
 });
