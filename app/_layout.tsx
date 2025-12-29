@@ -1,24 +1,27 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons'; // Библиотека иконок
+import { Tabs } from 'expo-router';
+import React from 'react';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
+export default function TabLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <Tabs screenOptions={{ 
+      tabBarActiveTintColor: '#00b894',
+      headerShown: false, 
+    }}>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Калории',
+          tabBarIcon: ({ color }) => <Ionicons name="nutrition" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="weight"
+        options={{
+          title: 'Вес',
+          tabBarIcon: ({ color }) => <Ionicons name="bar-chart" size={24} color={color} />,
+        }}
+      />
+    </Tabs>
   );
 }
